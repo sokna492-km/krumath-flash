@@ -329,8 +329,8 @@ export function FlashGame() {
     else void document.exitFullscreen?.().catch(() => {});
   };
 
-  const accuracy = round + (phase === "complete" ? 0 : 0) === 0 ? 0 : 0;
-  void accuracy;
+  const playing = phase !== "idle" && phase !== "complete";
+
 
   const playing = phase !== "idle" && phase !== "complete";
   const currentStep = seq && stepIndex >= 0 ? seq.steps[stepIndex] : null;
