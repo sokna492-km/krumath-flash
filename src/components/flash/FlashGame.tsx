@@ -331,8 +331,6 @@ export function FlashGame() {
 
   const playing = phase !== "idle" && phase !== "complete";
 
-
-  const playing = phase !== "idle" && phase !== "complete";
   const currentStep = seq && stepIndex >= 0 ? seq.steps[stepIndex] : null;
 
   const dailyDone = useMemo(() => stats.daily[dailyKey()], [stats.daily]);
