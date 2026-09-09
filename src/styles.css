@@ -40,28 +40,47 @@
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-ring: var(--ring);
-  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", "Kantumruy Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", "Kantumruy Pro", ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
   --radius: 0.9rem;
-  --background: oklch(0.17 0.018 250);
-  --foreground: oklch(0.97 0.005 250);
-  --surface: oklch(0.22 0.02 252);
-  --surface-foreground: oklch(0.96 0.005 250);
-  --primary: oklch(0.85 0.19 130);
-  --primary-foreground: oklch(0.19 0.03 140);
-  --secondary: oklch(0.27 0.022 252);
-  --secondary-foreground: oklch(0.95 0.005 250);
-  --muted: oklch(0.25 0.02 252);
-  --muted-foreground: oklch(0.68 0.017 252);
-  --accent: oklch(0.82 0.16 74);
-  --accent-foreground: oklch(0.2 0.03 74);
+  --background: oklch(0.17 0.025 263);
+  --foreground: oklch(0.97 0.005 263);
+  --surface: oklch(0.22 0.03 263);
+  --surface-foreground: oklch(0.96 0.005 263);
+  --primary: oklch(0.5461 0.2152 262.88);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.27 0.03 263);
+  --secondary-foreground: oklch(0.95 0.005 263);
+  --muted: oklch(0.25 0.028 263);
+  --muted-foreground: oklch(0.68 0.03 263);
+  --accent: oklch(0.72 0.14 250);
+  --accent-foreground: oklch(0.22 0.05 263);
   --success: oklch(0.83 0.18 150);
   --destructive: oklch(0.68 0.19 22);
-  --border: oklch(0.3 0.02 252);
-  --ring: oklch(0.85 0.19 130);
+  --border: oklch(0.3 0.03 263);
+  --ring: oklch(0.5461 0.2152 262.88);
+}
+
+.light {
+  --background: oklch(0.985 0.01 263);
+  --foreground: oklch(0.25 0.04 263);
+  --surface: oklch(1 0.005 263);
+  --surface-foreground: oklch(0.25 0.04 263);
+  --primary: oklch(0.5461 0.2152 262.88);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.95 0.02 263);
+  --secondary-foreground: oklch(0.3 0.04 263);
+  --muted: oklch(0.94 0.015 263);
+  --muted-foreground: oklch(0.5 0.03 263);
+  --accent: oklch(0.62 0.16 250);
+  --accent-foreground: oklch(0.99 0 0);
+  --success: oklch(0.55 0.16 150);
+  --destructive: oklch(0.55 0.2 22);
+  --border: oklch(0.88 0.02 263);
+  --ring: oklch(0.5461 0.2152 262.88);
 }
 
 @layer base {
@@ -74,29 +93,70 @@
     overscroll-behavior: none;
   }
 
+  html {
+    font-size: 112.5%; /* 18px base — scales rem utilities site-wide */
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-size: 1rem;
     -webkit-font-smoothing: antialiased;
+  }
+
+  html[lang="km"] {
+    --font-display: "Kantumruy Pro", "Sora", ui-sans-serif, system-ui, sans-serif;
+    --font-sans: "Kantumruy Pro", "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  html[lang="km"] body {
+    line-height: 1.65;
   }
 
   :focus-visible {
     outline: 2px solid var(--color-ring);
     outline-offset: 3px;
   }
+
+  .overlay-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--color-muted-foreground) 45%, transparent) transparent;
+  }
+
+  .overlay-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .overlay-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .overlay-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--color-muted-foreground) 45%, transparent);
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background-clip: padding-box;
+  }
+
+  .overlay-scroll::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklab, var(--color-muted-foreground) 60%, transparent);
+    background-clip: padding-box;
+  }
 }
 
 @utility flash-number {
-  font-family: var(--font-display);
+  font-family: "Kantumruy Pro", var(--font-display);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
   line-height: 0.95;
-  font-size: clamp(5rem, 26vw, 18rem);
+  font-size: clamp(3.5rem, min(26vw, 28vmin), 18rem);
+  user-select: none;
 }
 
 @utility tabular {
+  font-family: "Kantumruy Pro", var(--font-sans);
   font-variant-numeric: tabular-nums;
 }
 

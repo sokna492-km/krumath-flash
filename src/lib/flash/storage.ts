@@ -75,7 +75,17 @@ export function saveGame(
         : s.highestDifficulty,
     recent: [record, ...s.recent].slice(0, 15),
     daily: dailyId
-      ? { ...s.daily, [dailyId]: { score: record.score, correct: record.correct, total: record.total } }
+      ? {
+          ...s.daily,
+          [dailyId]: (() => {
+            const prev = s.daily[dailyId];
+            const next = { score: record.score, correct: record.correct, total: record.total };
+            if (!prev) return next;
+            if (record.score > prev.score) return next;
+            if (record.score === prev.score && record.correct > prev.correct) return next;
+            return prev;
+          })(),
+        }
       : s.daily,
   };
   try {

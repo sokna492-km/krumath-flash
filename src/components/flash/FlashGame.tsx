@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BarChart3, Maximize2, Minimize2, Settings2 } from "lucide-react";
 import {
   DIFFICULTIES,
   MODES,
   PRESETS,
   dailyKey,
+  dailyPlaySettings,
   defaultSettings,
   generateSequence,
   mulberry32,
@@ -12,14 +14,33 @@ import {
   speedFlashMs,
   todaySeed,
   type Difficulty,
+  type Mode,
   type Sequence,
   type Settings,
 } from "@/lib/flash/engine";
-import { emptyStats, loadSettings, loadStats, saveGame, saveSettings, type Stats } from "@/lib/flash/storage";
-import { buzz, play } from "@/lib/flash/sound";
+import { loadSettings, loadStats, saveGame, saveSettings, type Stats } from "@/lib/flash/storage";
+import { buzz, play, unlockAudio } from "@/lib/flash/sound";
+import { useLocale } from "@/components/i18n/LocaleProvider";
+import { formatNumber, type EnKey } from "@/lib/i18n";
 import { Btn, Chip } from "./ui";
 import { SettingsPanel, StatsPanel } from "./panels";
+import { ThemeToggle } from "./ThemeToggle";
+import { LocaleToggle } from "./LocaleToggle";
+import { IconTooltip } from "./IconTooltip";
 
+const iconBtnClass =
+  "inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:scale-[0.96]";
+
+const toolbarClass =
+  "flex items-center gap-0.5 rounded-xl border border-border/70 bg-secondary/50 p-0.5";
+
+function modeKey(id: Mode): EnKey {
+  return `mode.${id}` as EnKey;
+}
+
+function difficultyKey(id: Difficulty): EnKey {
+  return `difficulty.${id}` as EnKey;
+}
 type Phase =
   | "idle"
   | "countdown"
@@ -41,12 +62,14 @@ interface RoundOutcome {
 const OP_LABEL: Record<string, string> = { "+": "+", "-": "−", "×": "×", "÷": "÷" };
 
 export function FlashGame() {
-  const [settings, setSettings] = useState<Settings>(() => defaultSettings());
-  const [stats, setStats] = useState<Stats>(emptyStats);
+  const { t, locale } = useLocale();
+  const [settings, setSettings] = useState<Settings>(() => loadSettings(defaultSettings()));
+  const [stats, setStats] = useState<Stats>(() => loadStats());
   const [phase, setPhase] = useState<Phase>("idle");
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [error, setError] = useState(false);
 
   // session
   const [round, setRound] = useState(0);
@@ -70,18 +93,22 @@ export function FlashGame() {
   const answerShownAt = useRef(0);
   const submitting = useRef(false);
   const sessionStart = useRef(0);
+  const sessionFinished = useRef(false);
+  const settingsHydrated = useRef(false);
 
-  const endless = settings.mode === "survival" || settings.mode === "speed";
-  const isDaily = settings.mode === "daily";
-  const totalRounds = endless ? Infinity : isDaily ? 10 : settings.rounds;
-  const flashMsForRound = settings.mode === "speed" ? speedFlashMs(round) : settings.flashMs;
+  const playSettings = settings.mode === "daily" ? dailyPlaySettings(settings) : settings;
+  const endless = playSettings.mode === "survival" || playSettings.mode === "speed";
+  const isDaily = playSettings.mode === "daily";
+  const totalRounds = endless ? Infinity : isDaily ? playSettings.rounds : settings.rounds;
+  const flashMsForRound =
+    playSettings.mode === "speed" ? speedFlashMs(round) : playSettings.flashMs;
 
   useEffect(() => {
-    setStats(loadStats());
-    setSettings((s) => loadSettings(s));
+    settingsHydrated.current = true;
   }, []);
 
   useEffect(() => {
+    if (!settingsHydrated.current) return;
     saveSettings(settings);
   }, [settings]);
 
@@ -100,20 +127,21 @@ export function FlashGame() {
       clearTimers();
       const myRun = runId.current;
       const alive = () => runId.current === myRun;
+      const active = settings.mode === "daily" ? dailyPlaySettings(settings) : settings;
 
       let sequence: Sequence;
       try {
-        const rnd = isDaily
+        const rnd = active.mode === "daily"
           ? mulberry32(todaySeed() + roundIndex * 7919)
           : Math.random;
         sequence = generateSequence(
-          settings.mode,
-          settings.difficulty,
-          settings.flashes,
+          active.mode,
+          active.difficulty,
+          active.flashes,
           rnd,
         );
       } catch {
-        setError("Something went wrong. Try again.");
+        setError(true);
         setPhase("idle");
         return;
       }
@@ -125,8 +153,8 @@ export function FlashGame() {
       setVisible(false);
       submitting.current = false;
 
-      const flashMs = settings.mode === "speed" ? speedFlashMs(roundIndex) : settings.flashMs;
-      const gap = settings.gapMs;
+      const flashMs = active.mode === "speed" ? speedFlashMs(roundIndex) : active.flashMs;
+      const gap = active.gapMs;
 
       const schedule = (fn: () => void, ms: number) => {
         timers.current.push(window.setTimeout(() => alive() && fn(), ms));
@@ -141,7 +169,7 @@ export function FlashGame() {
           schedule(() => {
             setStepIndex(i);
             setVisible(true);
-            play("flash", settings.sound);
+            play("flash", active.sound);
           }, at);
           schedule(() => setVisible(false), at + flashMs);
         });
@@ -149,19 +177,19 @@ export function FlashGame() {
           () => {
             setPhase("answering");
             answerShownAt.current = performance.now();
-            window.setTimeout(() => answerRef.current?.focus(), 30);
+            schedule(() => answerRef.current?.focus(), 30);
           },
           sequence.steps.length * (flashMs + gap),
         );
       };
 
-      if (withCountdown && settings.countdown) {
+      if (withCountdown && active.countdown) {
         setPhase("countdown");
         setCountdownAt(3);
         [3, 2, 1].forEach((n, i) => {
           schedule(() => {
             setCountdownAt(n);
-            play(n === 1 ? "go" : "tick", settings.sound);
+            play(n === 1 ? "go" : "tick", active.sound);
           }, i * 650);
         });
         schedule(startFlashing, 3 * 650);
@@ -169,13 +197,15 @@ export function FlashGame() {
         startFlashing();
       }
     },
-    [clearTimers, isDaily, settings],
+    [clearTimers, settings],
   );
 
   /* ---------------- session control ---------------- */
 
   const startSession = useCallback(() => {
-    setError(null);
+    unlockAudio();
+    sessionFinished.current = false;
+    setError(false);
     setScore(0);
     setStreak(0);
     setBestStreak(0);
@@ -187,25 +217,28 @@ export function FlashGame() {
 
   const finishSession = useCallback(
     (finalScore: number, correct: number, played: number, best: number) => {
+      if (sessionFinished.current) return;
+      sessionFinished.current = true;
       clearTimers();
       setPhase("complete");
+      const active = settings.mode === "daily" ? dailyPlaySettings(settings) : settings;
       const next = saveGame(
         {
           at: Date.now(),
-          mode: settings.mode,
-          difficulty: settings.difficulty,
+          mode: active.mode,
+          difficulty: active.difficulty,
           score: finalScore,
           correct,
           total: played,
           bestStreak: best,
           durationMs: performance.now() - sessionStart.current,
         },
-        flashMsForRound,
-        isDaily ? dailyKey() : undefined,
+        active.mode === "speed" ? speedFlashMs(Math.max(0, played - 1)) : active.flashMs,
+        active.mode === "daily" ? dailyKey() : undefined,
       );
       setStats(next);
     },
-    [clearTimers, flashMsForRound, isDaily, settings.difficulty, settings.mode],
+    [clearTimers, settings],
   );
 
   const submit = useCallback(() => {
@@ -214,12 +247,13 @@ export function FlashGame() {
     submitting.current = true;
     clearTimers();
 
+    const active = settings.mode === "daily" ? dailyPlaySettings(settings) : settings;
     const given = Number(answer);
     const isRight = given === seq.answer;
     const responseMs = performance.now() - answerShownAt.current;
     const gained = isRight
       ? roundScore({
-          difficulty: settings.difficulty,
+          difficulty: active.difficulty,
           flashes: seq.steps.length,
           flashMs: flashMsForRound,
           answer: seq.answer,
@@ -239,13 +273,15 @@ export function FlashGame() {
     setCorrectCount(nextCorrect);
     setOutcome({ correct: isRight, given, expected: seq.answer, gained, responseMs });
     setPhase(isRight ? "correct" : "incorrect");
-    play(isRight ? (nextStreak >= 3 ? "streak" : "correct") : "wrong", settings.sound);
-    buzz(isRight ? 20 : [40, 60, 40].reduce((a, b) => a + b, 0), settings.haptics);
+    play(isRight ? (nextStreak >= 3 ? "streak" : "correct") : "wrong", active.sound);
+    buzz(isRight ? 20 : [40, 60, 40], active.haptics);
 
     const played = round + 1;
     const runOver = (endless && !isRight) || played >= totalRounds;
     if (runOver) {
-      window.setTimeout(() => finishSession(nextScore, nextCorrect, played, nextBest), 1100);
+      timers.current.push(
+        window.setTimeout(() => finishSession(nextScore, nextCorrect, played, nextBest), 1100),
+      );
     }
   }, [
     answer,
@@ -259,14 +295,13 @@ export function FlashGame() {
     round,
     score,
     seq,
-    settings.difficulty,
-    settings.haptics,
-    settings.sound,
+    settings,
     streak,
     totalRounds,
   ]);
 
   const next = useCallback(() => {
+    if (sessionFinished.current) return;
     const played = round + 1;
     if (played >= totalRounds || (endless && outcome && !outcome.correct)) {
       finishSession(score, correctCount, played, bestStreak);
@@ -285,6 +320,7 @@ export function FlashGame() {
 
   const exit = useCallback(() => {
     clearTimers();
+    sessionFinished.current = true;
     setPhase("idle");
   }, [clearTimers]);
 
@@ -323,6 +359,13 @@ export function FlashGame() {
     return () => window.removeEventListener("keydown", onKey);
   }, [next, pause, phase, round, runRound, showSettings, showStats, startSession]);
 
+  useEffect(() => {
+    const sync = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    sync();
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+
   const toggleFullscreen = () => {
     const el = document.documentElement;
     if (!document.fullscreenElement) void el.requestFullscreen?.().catch(() => {});
@@ -338,62 +381,94 @@ export function FlashGame() {
   /* ---------------- render ---------------- */
 
   return (
-    <main className="relative flex min-h-[100svh] flex-col px-5 pb-[env(safe-area-inset-bottom)] pt-[calc(env(safe-area-inset-top)+1rem)]">
+    <main className="relative flex min-h-[100dvh] flex-col pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pt-[calc(env(safe-area-inset-top)+1rem)]">
       {/* top bar */}
-      <header className="flex items-center justify-between text-sm text-muted-foreground">
+      <header className="flex min-w-0 items-center justify-between gap-3 text-sm text-muted-foreground">
         {playing ? (
           <>
-            <span className="tabular">
-              Score <span className="font-display text-foreground">{score.toLocaleString()}</span>
-              {streak > 1 && <span className="ml-3 text-accent">🔥 {streak}</span>}
+            <span className="tabular min-w-0 truncate">
+              {t("hud.score")}{" "}
+              <span className="font-display text-foreground">{formatNumber(locale, score)}</span>
+              {streak > 1 && <span className="ml-2 shrink-0 text-accent">🔥 {streak}</span>}
             </span>
-            <span className="tabular">
-              {endless ? `Round ${round + 1}` : `${round + 1} / ${totalRounds}`}
+            <span className="flex shrink-0 items-center gap-2">
+              <span className="tabular">
+                {endless
+                  ? t("hud.round", { n: round + 1 })
+                  : t("hud.roundOf", { current: round + 1, total: totalRounds })}
+              </span>
+              <nav aria-label={t("nav.theme")} className={`${toolbarClass} hidden sm:flex`}>
+                <LocaleToggle />
+                <ThemeToggle />
+              </nav>
             </span>
           </>
         ) : (
           <>
             <span className="font-display font-semibold tracking-tight text-foreground">
-              KruMath <span className="text-primary">Flash</span>
+              {t("brand.name")} <span className="text-primary">{t("brand.flash")}</span>
             </span>
-            <span className="flex items-center gap-1">
-              <button
-                onClick={() => setShowStats(true)}
-                className="rounded-lg px-3 py-2 hover:bg-secondary hover:text-foreground"
+            <nav aria-label={t("nav.gameControls")} className={toolbarClass}>
+              <LocaleToggle />
+              <ThemeToggle />
+              <IconTooltip label={t("nav.stats")} side="bottom">
+                <button
+                  type="button"
+                  onClick={() => setShowStats(true)}
+                  aria-label={t("nav.stats")}
+                  className={iconBtnClass}
+                >
+                  <BarChart3 className="size-4" strokeWidth={1.75} aria-hidden />
+                </button>
+              </IconTooltip>
+              <IconTooltip
+                label={isFullscreen ? t("nav.exitFullscreen") : t("nav.enterFullscreen")}
+                side="bottom"
               >
-                Stats
-              </button>
-              <button
-                onClick={toggleFullscreen}
-                aria-label="Fullscreen"
-                className="hidden rounded-lg px-3 py-2 hover:bg-secondary hover:text-foreground sm:block"
-              >
-                ⛶
-              </button>
-              <button
-                onClick={() => setShowSettings(true)}
-                aria-label="Settings"
-                className="rounded-lg px-3 py-2 hover:bg-secondary hover:text-foreground"
-              >
-                ⚙
-              </button>
-            </span>
+                <button
+                  type="button"
+                  onClick={toggleFullscreen}
+                  aria-label={isFullscreen ? t("nav.exitFullscreen") : t("nav.enterFullscreen")}
+                  className={`${iconBtnClass} max-sm:!hidden`}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="size-4" strokeWidth={1.75} aria-hidden />
+                  ) : (
+                    <Maximize2 className="size-4" strokeWidth={1.75} aria-hidden />
+                  )}
+                </button>
+              </IconTooltip>
+              <IconTooltip label={t("nav.settings")} side="bottom">
+                <button
+                  type="button"
+                  onClick={() => setShowSettings(true)}
+                  aria-label={t("nav.settings")}
+                  className={iconBtnClass}
+                >
+                  <Settings2 className="size-4" strokeWidth={1.75} aria-hidden />
+                </button>
+              </IconTooltip>
+            </nav>
           </>
         )}
       </header>
 
       {/* stage */}
-      <section className="flex flex-1 flex-col items-center justify-center text-center">
+      <section
+        className={`flex flex-1 flex-col items-center text-center ${
+          phase === "answering" ? "justify-end pb-4 sm:justify-center sm:pb-0" : "justify-center"
+        }`}
+      >
         {phase === "idle" && (
-          <div className="w-full max-w-md">
-            <h1 className="font-display text-5xl font-extrabold tracking-tight sm:text-6xl">
-              KruMath <span className="text-primary">Flash</span>
+          <div className="w-full max-w-md lg:max-w-lg">
+            <h1 className="font-display text-5xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl">
+              {t("brand.name")} <span className="text-primary">{t("brand.flash")}</span>
             </h1>
-            <p className="mt-3 text-muted-foreground">Watch. Calculate. Answer.</p>
+            <p className="mt-3 text-muted-foreground">{t("tagline")}</p>
 
             <div className="mt-8">
-              <Btn variant="primary" className="w-full py-5 text-xl" onClick={startSession}>
-                Start
+              <Btn variant="primary" className="w-full py-5 text-4xl! font-bold! leading-none" onClick={startSession}>
+                {t("action.start")}
               </Btn>
             </div>
 
@@ -401,8 +476,10 @@ export function FlashGame() {
               {DIFFICULTIES.map((d) => (
                 <Chip
                   key={d.id}
-                  active={settings.difficulty === d.id}
+                  active={playSettings.difficulty === d.id}
+                  disabled={isDaily}
                   onClick={() => {
+                    if (isDaily) return;
                     const p = PRESETS[d.id as Difficulty];
                     setSettings((s) => ({
                       ...s,
@@ -413,7 +490,7 @@ export function FlashGame() {
                     }));
                   }}
                 >
-                  {d.label}
+                  {t(difficultyKey(d.id))}
                 </Chip>
               ))}
             </div>
@@ -423,18 +500,25 @@ export function FlashGame() {
                 <Chip
                   key={m.id}
                   active={settings.mode === m.id}
-                  onClick={() => setSettings((s) => ({ ...s, mode: m.id }))}
+                  onClick={() =>
+                    setSettings((s) =>
+                      m.id === "daily" ? dailyPlaySettings({ ...s, mode: "daily" }) : { ...s, mode: m.id },
+                    )
+                  }
                 >
-                  {m.label}
+                  {t(modeKey(m.id))}
                 </Chip>
               ))}
             </div>
 
             <p className="mt-6 text-sm text-muted-foreground">
-              Best {stats.bestScore.toLocaleString()} · Streak {stats.bestStreak}
-              {isDaily && dailyDone && ` · Today ${dailyDone.correct}/${dailyDone.total}`}
+              {t("hud.best", { score: formatNumber(locale, stats.bestScore) })} ·{" "}
+              {t("hud.streak", { n: stats.bestStreak })}
+              {isDaily &&
+                dailyDone &&
+                ` · ${t("hud.today", { correct: dailyDone.correct, total: dailyDone.total })}`}
             </p>
-            {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+            {error && <p className="mt-3 text-sm text-destructive">{t("error.generic")}</p>}
           </div>
         )}
 
@@ -445,9 +529,12 @@ export function FlashGame() {
         )}
 
         {phase === "flashing" && (
-          <div className="flex min-h-[40vh] items-center justify-center" aria-hidden="true">
+          <div
+            className="flex min-h-[40vh] max-w-full items-center justify-center overflow-x-hidden px-2 max-md:min-h-[28vh]"
+            aria-hidden="true"
+          >
             {visible && currentStep && (
-              <div key={stepIndex} className="anim-flash flash-number">
+              <div key={stepIndex} className="anim-flash flash-number max-w-full">
                 {stepIndex > 0 && currentStep.op && (
                   <span className="mr-2 text-muted-foreground">{OP_LABEL[currentStep.op]}</span>
                 )}
@@ -459,7 +546,9 @@ export function FlashGame() {
 
         {phase === "answering" && (
           <div className="w-full max-w-sm">
-            <div className="flash-number text-muted-foreground/40">?</div>
+            <div className="font-display text-4xl font-bold text-muted-foreground/40 sm:text-5xl" aria-hidden="true">
+              ?
+            </div>
             <input
               ref={answerRef}
               value={answer}
@@ -468,12 +557,12 @@ export function FlashGame() {
               inputMode="numeric"
               pattern="-?[0-9]*"
               autoComplete="off"
-              aria-label="Your answer"
-              placeholder="Answer"
+              aria-label={t("answer.aria")}
+              placeholder={t("answer.placeholder")}
               className="tabular mt-4 w-full rounded-2xl border border-border bg-surface px-6 py-5 text-center font-display text-4xl font-semibold outline-none focus:border-primary"
             />
             <Btn variant="primary" className="mt-3 w-full py-4 text-lg" onClick={submit}>
-              Submit
+              {t("action.submit")}
             </Btn>
           </div>
         )}
@@ -485,73 +574,82 @@ export function FlashGame() {
                 outcome.correct ? "text-success" : "text-destructive"
               }`}
             >
-              {outcome.correct ? "✓ Correct" : "✕ Incorrect"}
+              {outcome.correct ? t("feedback.correct") : t("feedback.incorrect")}
             </div>
-            <div className="tabular mt-4 font-display text-6xl font-extrabold">
+            <div className="tabular mt-4 font-display text-5xl font-extrabold sm:text-6xl">
               {outcome.expected}
             </div>
             {outcome.correct ? (
               <div className="mt-2 text-accent">+{outcome.gained}</div>
             ) : (
-              <div className="mt-2 text-muted-foreground">Your answer: {outcome.given}</div>
+              <div className="mt-2 text-muted-foreground">
+                {t("feedback.yourAnswer", { n: outcome.given })}
+              </div>
             )}
             <details className="mt-4 text-sm text-muted-foreground">
-              <summary className="cursor-pointer select-none">Review</summary>
+              <summary className="cursor-pointer select-none">{t("feedback.review")}</summary>
               <p className="tabular mt-2">{seq ? `${sequenceText(seq)} = ${seq.answer}` : ""}</p>
             </details>
             <Btn variant="primary" className="mt-6 w-full py-4 text-lg" onClick={next}>
-              Next
+              {t("action.next")}
             </Btn>
           </div>
         )}
 
         {phase === "paused" && (
           <div className="w-full max-w-sm">
-            <div className="font-display text-3xl font-semibold">Paused</div>
-            <p className="mt-2 text-sm text-muted-foreground">The round will replay from the start.</p>
+            <div className="font-display text-3xl font-semibold">{t("pause.title")}</div>
+            <p className="mt-2 text-sm text-muted-foreground">{t("pause.hint")}</p>
             <Btn
               variant="primary"
               className="mt-6 w-full py-4 text-lg"
               onClick={() => runRound(round, true)}
             >
-              Resume
+              {t("action.resume")}
             </Btn>
             <Btn variant="quiet" className="mt-2 w-full" onClick={exit}>
-              Exit
+              {t("action.exit")}
             </Btn>
           </div>
         )}
 
         {phase === "complete" && (
           <div className="anim-pop w-full max-w-sm">
-            <div className="tabular font-display text-6xl font-extrabold">
-              {score.toLocaleString()}
+            <div className="tabular font-display text-5xl font-extrabold sm:text-6xl">
+              {formatNumber(locale, score)}
             </div>
             <p className="mt-2 text-muted-foreground">
-              {correctCount === round + 1 ? "Perfect run" : correctCount > 0 ? "Great run" : "Keep training"}
+              {correctCount === round + 1
+                ? t("complete.perfect")
+                : correctCount > 0
+                  ? t("complete.great")
+                  : t("complete.keepTraining")}
             </p>
             <p className="tabular mt-4 text-sm text-muted-foreground">
-              {correctCount} / {round + 1} correct ·{" "}
-              {Math.round((correctCount / Math.max(1, round + 1)) * 100)}% accuracy · {bestStreak}{" "}
-              streak
+              {t("complete.summary", {
+                correct: correctCount,
+                total: round + 1,
+                accuracy: Math.round((correctCount / Math.max(1, round + 1)) * 100),
+                streak: bestStreak,
+              })}
             </p>
             <Btn variant="primary" className="mt-6 w-full py-4 text-lg" onClick={startSession}>
-              Play again
+              {t("action.playAgain")}
             </Btn>
             <div className="mt-3 flex justify-center gap-2 text-sm">
               <Btn variant="quiet" onClick={() => setShowStats(true)}>
-                Stats
+                {t("action.stats")}
               </Btn>
               <Btn variant="quiet" onClick={exit}>
-                Exit
+                {t("action.exit")}
               </Btn>
             </div>
           </div>
         )}
       </section>
 
-      {/* progress dots */}
-      <footer className="flex h-12 items-center justify-center gap-2">
+      {/* progress dots / pause */}
+      <footer className="flex min-h-12 items-center justify-center gap-2">
         {phase === "flashing" && seq
           ? seq.steps.map((_, i) => (
               <span
@@ -559,10 +657,10 @@ export function FlashGame() {
                 className={`h-2 w-2 rounded-full ${i <= stepIndex ? "bg-primary" : "bg-muted"}`}
               />
             ))
-          : playing && (
-              <button onClick={pause} className="text-xs text-muted-foreground hover:text-foreground">
-                Esc to pause
-              </button>
+          : playing && phase !== "paused" && (
+              <Btn variant="quiet" className="min-h-10 px-4 py-2 text-sm" onClick={pause}>
+                {t("action.pause")}
+              </Btn>
             )}
       </footer>
 

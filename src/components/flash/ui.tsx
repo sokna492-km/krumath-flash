@@ -1,4 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useLocale } from "@/components/i18n/LocaleProvider";
+import { IconTooltip } from "./IconTooltip";
 
 type Variant = "primary" | "ghost" | "quiet";
 
@@ -30,17 +32,18 @@ export function Btn({
 export function Chip({
   active,
   children,
+  className = "",
   ...rest
 }: ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
   return (
     <button
       {...rest}
       aria-pressed={active}
-      className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+      className={`rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
         active
           ? "bg-primary text-primary-foreground"
           : "bg-secondary text-muted-foreground hover:text-foreground"
-      }`}
+      } ${className}`}
     >
       {children}
     </button>
@@ -56,6 +59,8 @@ export function Overlay({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const { t } = useLocale();
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-6"
@@ -66,17 +71,20 @@ export function Overlay({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-border bg-surface p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-6"
+        className="overlay-scroll max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-border bg-surface p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-6 md:max-w-lg"
       >
         <div className="mb-5 flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold">{title}</h2>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded-lg px-3 py-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            ✕
-          </button>
+          <IconTooltip label={t("action.close")} side="left">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("action.close")}
+              className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              ✕
+            </button>
+          </IconTooltip>
         </div>
         {children}
       </div>
@@ -86,9 +94,9 @@ export function Overlay({
 
 export function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border/60 py-3 last:border-0">
+    <div className="flex flex-col items-stretch gap-2 border-b border-border/60 py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-2">{children}</div>
+      <div className="flex min-w-0 items-center gap-2 sm:justify-end">{children}</div>
     </div>
   );
 }

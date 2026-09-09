@@ -1,6 +1,8 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "krumath-flash",
   "private": true,
+  "description": "Mental math flash trainer — flash numbers, calculate in your head, answer fast.",
+  "license": "MIT",
   "sideEffects": false,
   "type": "module",
   "scripts": {

@@ -1,24 +1,54 @@
-# KruMath-Flash
+# KruMath Flash
 
-Implement exactly the screenshot and nothing else
+**Watch. Calculate. Answer.**
 
-This project was built with [Lovable](https://lovable.dev).
+A mental math flash trainer for students, classrooms, and projectors. Numbers flash on screen — you calculate in your head and answer fast.
 
-## Build with Lovable
+English and Khmer UI, light/dark theme, fullscreen support, and stats stored locally in your browser.
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/1dc4076c-7cd9-47ca-8836-086c94abc8c2).
+## Features
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+- **Game modes:** Addition, Subtraction, Add / Subtract, Multiplication, Division, Mixed mental, Survival, Speed, Daily challenge
+- **Difficulties:** Easy, Medium, Hard, Expert
+- **Tunable play:** Numbers per round, flash time, gap between numbers, round count, countdown
+- **Feedback:** Sound and vibration (where supported)
+- **Local stats:** Games played, accuracy, streaks, and recent results — no account required
 
-## Development
+## Tech stack
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+- React 19
+- TanStack Start / Router
+- Vite 8 (via `@lovable.dev/vite-tanstack-config`)
+- Tailwind CSS 4
+- TypeScript
+
+## Quick start
+
+Requires [Node.js](https://nodejs.org/) (LTS recommended) and npm.
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+git clone https://github.com/sokna492-km/krumath-flash.git
+cd krumath-flash
+npm install
 npm run dev
 ```
+
+Open the URL shown in the terminal (usually `http://localhost:5173`).
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | Run ESLint |
+| `npm run format` | Format with Prettier |
+
+## Contributing
+
+Issues and pull requests are welcome.
+
+## License
+
+[MIT](LICENSE)

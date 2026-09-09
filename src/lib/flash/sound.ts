@@ -4,11 +4,22 @@ let ctx: AudioContext | null = null;
 
 function audio(): AudioContext | null {
   if (typeof window === "undefined") return null;
-  const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  const Ctor =
+    window.AudioContext ??
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctor) return null;
   if (!ctx) ctx = new Ctor();
   if (ctx.state === "suspended") void ctx.resume();
   return ctx;
+}
+
+/** Call from a user gesture (Start / Sound toggle) so later timer tones are allowed. */
+export function unlockAudio() {
+  audio();
+}
+
+export function canVibrate(): boolean {
+  return typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
 }
 
 type Tone = "tick" | "flash" | "correct" | "wrong" | "streak" | "go";
@@ -39,10 +50,10 @@ export function play(tone: Tone, enabled: boolean) {
   osc.stop(ac.currentTime + t.d + 0.02);
 }
 
-export function buzz(ms: number, enabled: boolean) {
-  if (!enabled || typeof navigator === "undefined" || !navigator.vibrate) return;
+export function buzz(pattern: number | number[], enabled: boolean) {
+  if (!enabled || !canVibrate()) return;
   try {
-    navigator.vibrate(ms);
+    navigator.vibrate(pattern);
   } catch {
     /* ignore */
   }

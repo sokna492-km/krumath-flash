@@ -37,23 +37,23 @@ export interface Settings {
   haptics: boolean;
 }
 
-export const MODES: { id: Mode; label: string }[] = [
-  { id: "add", label: "Addition" },
-  { id: "sub", label: "Subtraction" },
-  { id: "mixed", label: "Add / Subtract" },
-  { id: "mul", label: "Multiplication" },
-  { id: "div", label: "Division" },
-  { id: "mental", label: "Mixed mental" },
-  { id: "survival", label: "Survival" },
-  { id: "speed", label: "Speed" },
-  { id: "daily", label: "Daily challenge" },
+export const MODES: { id: Mode }[] = [
+  { id: "add" },
+  { id: "sub" },
+  { id: "mixed" },
+  { id: "mul" },
+  { id: "div" },
+  { id: "mental" },
+  { id: "survival" },
+  { id: "speed" },
+  { id: "daily" },
 ];
 
-export const DIFFICULTIES: { id: Difficulty; label: string }[] = [
-  { id: "easy", label: "Easy" },
-  { id: "medium", label: "Medium" },
-  { id: "hard", label: "Hard" },
-  { id: "expert", label: "Expert" },
+export const DIFFICULTIES: { id: Difficulty }[] = [
+  { id: "easy" },
+  { id: "medium" },
+  { id: "hard" },
+  { id: "expert" },
 ];
 
 interface Preset {
@@ -112,6 +112,23 @@ export function todaySeed(date = new Date()): number {
 
 export function dailyKey(date = new Date()): string {
   return date.toISOString().slice(0, 10);
+}
+
+/** Shared daily challenge uses a fixed difficulty + timing profile. */
+export const DAILY_DIFFICULTY: Difficulty = "medium";
+export const DAILY_ROUNDS = 10;
+
+export function dailyPlaySettings(base: Settings): Settings {
+  const p = PRESETS[DAILY_DIFFICULTY];
+  return {
+    ...base,
+    mode: "daily",
+    difficulty: DAILY_DIFFICULTY,
+    flashes: p.flashes,
+    flashMs: p.flashMs,
+    gapMs: p.gapMs,
+    rounds: DAILY_ROUNDS,
+  };
 }
 
 const int = (rnd: () => number, min: number, max: number) =>
@@ -174,7 +191,7 @@ export function generateSequence(
     let op = pick(rnd, ops);
     let value = 0;
 
-    // Guard rails per operation
+    // Guard rails per operation — keep running totals non-negative and integral.
     if (op === "×") {
       if (Math.abs(total) > 5000) op = "+";
       else value = int(rnd, 2, difficulty === "easy" ? 5 : 9);
@@ -184,14 +201,26 @@ export function generateSequence(
       if (ds.length === 0) op = "+";
       else value = pick(rnd, ds);
     }
-    if (op === "+") value = int(rnd, p.min, p.max);
-    if (op === "-") {
-      const cap = Math.min(p.max, Math.max(p.min, total));
-      value = int(rnd, p.min, Math.max(p.min, cap));
-      if (total - value < 0) value = total;
+    if (op === "+") {
+      value = int(rnd, p.min, p.max);
+      if (value < 1) value = 1;
     }
-    if (value === 0) value = 1;
-    // avoid trivial ×1 / ÷1 / +0
+    if (op === "-") {
+      if (total <= 0) {
+        op = "+";
+        value = Math.max(1, int(rnd, p.min, p.max));
+      } else {
+        const cap = Math.min(p.max, total);
+        const lo = Math.min(Math.max(1, p.min), cap);
+        value = int(rnd, lo, cap);
+        if (value > total) value = total;
+        if (value < 1) {
+          op = "+";
+          value = Math.max(1, int(rnd, p.min, p.max));
+        }
+      }
+    }
+    // avoid trivial ×1 / ÷1
     if ((op === "×" || op === "÷") && value === 1) value = 2;
 
     switch (op) {
@@ -199,7 +228,7 @@ export function generateSequence(
         total += value;
         break;
       case "-":
-        total -= value;
+        total = Math.max(0, total - value);
         break;
       case "×":
         total *= value;
@@ -208,10 +237,40 @@ export function generateSequence(
         total = total / value;
         break;
     }
+    if (!Number.isFinite(total) || total < 0) total = 0;
     steps.push({ value, op });
   }
 
   return { steps, answer: total };
+}
+
+/** Dev/runtime check helper: every generated sequence stays non-negative. */
+export function assertSequenceNonNegative(seq: Sequence): boolean {
+  let total = 0;
+  for (let i = 0; i < seq.steps.length; i++) {
+    const step = seq.steps[i]!;
+    if (step.value < 0) return false;
+    if (i === 0 || step.op === null) {
+      total = step.value;
+      continue;
+    }
+    switch (step.op) {
+      case "+":
+        total += step.value;
+        break;
+      case "-":
+        total -= step.value;
+        break;
+      case "×":
+        total *= step.value;
+        break;
+      case "÷":
+        total = total / step.value;
+        break;
+    }
+    if (!Number.isFinite(total) || total < 0) return false;
+  }
+  return total === seq.answer && seq.answer >= 0;
 }
 
 export function sequenceText(seq: Sequence): string {

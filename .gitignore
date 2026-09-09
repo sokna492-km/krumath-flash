@@ -16,17 +16,45 @@ dist-ssr
 .nitro
 *.local
 
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
+
+# OS / tooling
+.DS_Store
+Thumbs.db
+coverage
+*.tsbuildinfo
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Agent / personal workspace notes (if ever re-added)
+AGENTS.md
+SOUL.md
+USER.md
+MEMORY.md
+TOOLS.md
+HEARTBEAT.md
+memory/
+.cursor/
+.claude/
+
+# Optional local Bun lock (npm package-lock.json is canonical)
+bun.lock
+bun.lockb

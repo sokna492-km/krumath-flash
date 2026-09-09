@@ -1,12 +1,32 @@
+import { DEFAULT_LOCALE, translate, type Locale } from "@/lib/i18n";
+
+function resolveLocale(): Locale {
+  try {
+    if (typeof localStorage !== "undefined") {
+      const stored = localStorage.getItem("krumath-flash-locale");
+      if (stored === "en" || stored === "km") return stored;
+    }
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_LOCALE;
+}
+
 export function renderErrorPage(): string {
+  const locale = resolveLocale();
+  const title = translate(locale, "error.pageTitle");
+  const body = translate(locale, "error.pageBody");
+  const tryAgain = translate(locale, "action.tryAgain");
+  const goHome = translate(locale, "action.goHome");
+
   return `<!doctype html>
-<html lang="en">
+<html lang="${locale}">
   <head>
     <meta charset="utf-8" />
-    <title>This page didn't load</title>
+    <title>${title}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-      body { font: 15px/1.5 system-ui, -apple-system, sans-serif; background: #fafafa; color: #111; display: grid; place-items: center; min-height: 100vh; margin: 0; padding: 1.5rem; }
+      body { font: 15px/1.5 "Kantumruy Pro", system-ui, -apple-system, sans-serif; background: #fafafa; color: #111; display: grid; place-items: center; min-height: 100vh; margin: 0; padding: 1.5rem; }
       .card { max-width: 28rem; width: 100%; text-align: center; padding: 2rem; }
       h1 { font-size: 1.25rem; margin: 0 0 0.5rem; }
       p { color: #4b5563; margin: 0 0 1.5rem; }
@@ -15,14 +35,17 @@ export function renderErrorPage(): string {
       .primary { background: #111; color: #fff; }
       .secondary { background: #fff; color: #111; border-color: #d1d5db; }
     </style>
+    <script>
+      (function(){try{var l=localStorage.getItem("krumath-flash-locale");if(l!=="en"&&l!=="km")l="km";document.documentElement.lang=l;}catch(e){document.documentElement.lang="km";}})();
+    </script>
   </head>
   <body>
     <div class="card">
-      <h1>This page didn't load</h1>
-      <p>Something went wrong on our end. You can try refreshing or head back home.</p>
+      <h1>${title}</h1>
+      <p>${body}</p>
       <div class="actions">
-        <button class="primary" onclick="location.reload()">Try again</button>
-        <a class="secondary" href="/">Go home</a>
+        <button class="primary" onclick="location.reload()">${tryAgain}</button>
+        <a class="secondary" href="/">${goHome}</a>
       </div>
     </div>
   </body>
