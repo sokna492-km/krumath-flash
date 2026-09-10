@@ -42,7 +42,7 @@ function Toggle({
         if (disabled) return;
         onChange(!on);
       }}
-      className={`h-8 w-12 rounded-full p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`h-8 w-12 cursor-pointer rounded-full p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
         on ? "bg-primary" : "bg-muted"
       }`}
     >

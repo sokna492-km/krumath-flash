@@ -22,7 +22,7 @@ export function Btn({
   return (
     <button
       {...rest}
-      className={`inline-flex select-none items-center justify-center gap-2 rounded-xl px-5 py-3 text-base font-medium transition-colors disabled:opacity-50 ${VARIANTS[variant]} ${className}`}
+      className={`inline-flex cursor-pointer select-none items-center justify-center gap-2 rounded-xl px-5 py-3 text-base font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]} ${className}`}
     >
       {children}
     </button>
@@ -39,7 +39,7 @@ export function Chip({
     <button
       {...rest}
       aria-pressed={active}
-      className={`rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`cursor-pointer rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
         active
           ? "bg-primary text-primary-foreground"
           : "bg-secondary text-muted-foreground hover:text-foreground"
@@ -80,7 +80,7 @@ export function Overlay({
               type="button"
               onClick={onClose}
               aria-label={t("action.close")}
-              className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+              className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
               ✕
             </button>

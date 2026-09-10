@@ -1,4 +1,5 @@
 import { DEFAULT_LOCALE, translate, type Locale } from "@/lib/i18n";
+import { getHomeUrl } from "@/lib/krumathUrls";
 
 function resolveLocale(): Locale {
   try {
@@ -18,6 +19,7 @@ export function renderErrorPage(): string {
   const body = translate(locale, "error.pageBody");
   const tryAgain = translate(locale, "action.tryAgain");
   const goHome = translate(locale, "action.goHome");
+  const homeUrl = getHomeUrl();
 
   return `<!doctype html>
 <html lang="${locale}">
@@ -45,7 +47,7 @@ export function renderErrorPage(): string {
       <p>${body}</p>
       <div class="actions">
         <button class="primary" onclick="location.reload()">${tryAgain}</button>
-        <a class="secondary" href="/">${goHome}</a>
+        <a class="secondary" href="${homeUrl}">${goHome}</a>
       </div>
     </div>
   </body>

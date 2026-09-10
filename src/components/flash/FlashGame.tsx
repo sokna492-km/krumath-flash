@@ -28,8 +28,13 @@ import { ThemeToggle } from "./ThemeToggle";
 import { LocaleToggle } from "./LocaleToggle";
 import { IconTooltip } from "./IconTooltip";
 
+async function tryOpenStats(open: () => void) {
+  const { requireSignedInForAction } = await import("@/lib/authGate");
+  if (await requireSignedInForAction()) open();
+}
+
 const iconBtnClass =
-  "inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:scale-[0.96]";
+  "inline-flex size-9 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:scale-[0.96]";
 
 const toolbarClass =
   "flex items-center gap-0.5 rounded-xl border border-border/70 bg-secondary/50 p-0.5";
@@ -414,7 +419,9 @@ export function FlashGame() {
               <IconTooltip label={t("nav.stats")} side="bottom">
                 <button
                   type="button"
-                  onClick={() => setShowStats(true)}
+                  onClick={() => {
+                    void tryOpenStats(() => setShowStats(true));
+                  }}
                   aria-label={t("nav.stats")}
                   className={iconBtnClass}
                 >
@@ -637,7 +644,12 @@ export function FlashGame() {
               {t("action.playAgain")}
             </Btn>
             <div className="mt-3 flex justify-center gap-2 text-sm">
-              <Btn variant="quiet" onClick={() => setShowStats(true)}>
+              <Btn
+                variant="quiet"
+                onClick={() => {
+                  void tryOpenStats(() => setShowStats(true));
+                }}
+              >
                 {t("action.stats")}
               </Btn>
               <Btn variant="quiet" onClick={exit}>

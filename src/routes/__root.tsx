@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
-  Link,
   createRootRouteWithContext,
   useRouter,
   HeadContent,
@@ -10,6 +9,7 @@ import {
 import { type ReactNode } from "react";
 
 import { LocaleProvider, useLocale } from "@/components/i18n/LocaleProvider";
+import { getHomeUrl } from "@/lib/krumathUrls";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -22,12 +22,12 @@ function NotFoundComponent() {
         <h2 className="mt-4 text-xl font-semibold text-foreground">{t("notFound.title")}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t("notFound.body")}</p>
         <div className="mt-6">
-          <Link
-            to="/"
+          <a
+            href={getHomeUrl()}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             {t("action.goHome")}
-          </Link>
+          </a>
         </div>
       </div>
     </div>
@@ -57,7 +57,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             {t("action.tryAgain")}
           </button>
           <a
-            href="/"
+            href={getHomeUrl()}
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
             {t("action.goHome")}
@@ -89,7 +89,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Kantumruy+Pro:wght@400;500;600;700&family=Sora:wght@400;600;700;800&display=swap",
       },
-      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "icon", href: `${import.meta.env.BASE_URL}favicon.svg`, type: "image/svg+xml" },
     ],
   }),
 

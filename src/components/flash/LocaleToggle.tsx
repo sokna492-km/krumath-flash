@@ -15,7 +15,7 @@ export function LocaleToggle({ className = "" }: { className?: string }) {
         onClick={toggleLocale}
         aria-label={isKm ? t("nav.switchToEn") : t("nav.switchToKm")}
         aria-pressed={isKm}
-        className={`inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:scale-[0.96] ${className}`}
+        className={`inline-flex h-9 min-w-9 cursor-pointer items-center justify-center rounded-lg px-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:scale-[0.96] ${className}`}
       >
         <span
           className="text-[12px] font-semibold leading-none tracking-wide"
